@@ -1,106 +1,89 @@
 #!/usr/bin/env python3
 
-import os
+import pathlib
 import sqlite3
 from datetime import datetime
 
-# set pathname
-BASE_DIR = '/home/pi/telegram-bot/maid-account/'  
-database_file = 'maid-account.db'
+import config
 
-def is_table(table_name):
-    try:
-        connection = sqlite3.connect(os.path.join(BASE_DIR, database_file))
-        cursor = connection.cursor()
-        cursor.execute(f'''
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name='{table_name}';
-        ''')
-        value = cursor.fetchone()
-        if value == None:
-            return False
-        if value[0] == table_name:
-            return True
-    except sqlite3.OperationalError as error:
-        print(f'An error occurred. {error}.')
-    finally:
-        connection.commit()
-        connection.close()
+# set pathname
+database_file = config.database_file
+
+class SqlConnect:
+    def __init__(self, filename):
+        self.filename = filename
+    def __enter__(self):
+        self.connection = sqlite3.connect(self.filename)
+        self.cursor = self.connection.cursor()
+        return self.cursor
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.connection.commit()
+        self.connection.close()
 
 def create_table(table):
-    try:
-        connection = sqlite3.connect(os.path.join(BASE_DIR, database_file))
-        cursor = connection.cursor()
+    with SqlConnect(database_file) as cursor:
         cursor.execute(f'''
             CREATE TABLE {table} (
-            date TEXT, deposit INTEGER, withdraw INTEGER, description TEXT);
-        ''')
-    except sqlite3.OperationalError as error:
-        print(f'An error occurred. {error}.')
-    finally:
-        connection.commit()
-        connection.close()
+            date TEXT,
+            deposit INTEGER DEFAULT 0,
+            withdraw INTEGER DEFAULT 0,
+            description TEXT);
+                ''')
 
 def deposit(table, date, amount, description):
-    try:
-        connection = sqlite3.connect(os.path.join(BASE_DIR, database_file))
-        cursor = connection.cursor()
+    with SqlConnect(database_file) as cursor:
         cursor.execute(f'''
-            INSERT INTO {table} (
-            date, deposit, description) VALUES (?, ?, ?);
-        ''', [date, amount, description])
-    except sqlite3.OperationalError as error:
-        print(f'An error occurred. {error}.')
-    finally:
-        connection.commit()
-        connection.close()
+            INSERT INTO {table}
+            (date, deposit, description)
+            VALUES (?, ?, ?);
+                ''', [date, amount, description])
 
 def withdraw(table, date, amount, description):
-    try:
-        connection = sqlite3.connect(os.path.join(BASE_DIR, database_file))
-        cursor = connection.cursor()
+    with SqlConnect(database_file) as cursor:
         cursor.execute(f'''
-            INSERT INTO {table} (
-            date, withdraw, description) VALUES (?, ?, ?);
-        ''', [date, amount, description])
-    except sqlite3.OperationalError as error:
-        print(f'An error occurred. {error}.')
-    finally:
-        connection.commit()
-        connection.close()
+            INSERT INTO {table}
+            (date, withdraw, description)
+            VALUES (?, ?, ?);
+                ''', [date, amount, description])
 
 def check_balance(table):
-    try:
-        connection = sqlite3.connect(os.path.join(BASE_DIR, database_file))
-        cursor = connection.cursor()
-        cursor.execute(f'SELECT SUM(deposit) FROM {table};')
-        total_deposit = cursor.fetchone()
-        cursor.execute(f'SELECT SUM(withdraw) FROM {table};')
-        total_withdraw = cursor.fetchone()
-    except sqlite3.OperationalError as error:
-        print(f'An error occurred. {error}.')
-    finally:
-        connection.commit()
-        connection.close()
-    if total_deposit[0] == None:
-        total_deposit[0] = 0
-    if total_withdraw[0] == None:
-        total_withdraw[0] = 0
-    balance = float(total_deposit[0]) - float(total_withdraw[0])
-    return [total_deposit[0], total_withdraw[0], balance]
+    with SqlConnect(database_file) as cursor:
+        deposit = cursor.execute(f'''
+            SELECT SUM(deposit) FROM {table};
+                ''').fetchone()
+        withdraw = cursor.execute(f'''
+            SELECT SUM(withdraw) FROM {table};
+                ''').fetchone()
+        balance = cursor.execute(f'''
+            SELECT (SUM(deposit) - SUM(withdraw)) FROM {table};
+                ''').fetchone()
+    return [deposit[0], withdraw[0], balance[0]]
 
 def get_statement(table):
-    try:
-        connection = sqlite3.connect(os.path.join(BASE_DIR, database_file))
-        cursor = connection.cursor()
-        cursor.execute(f'SELECT * FROM {table};')
-        db_data = cursor.fetchall()
-    except sqlite3.OperationalError as error:
-        print(f'An error occurred. {error}.')
-    finally:
-        connection.commit()
-        connection.close()
-    output = '   Date   Deposit  Withdraw  Description'
+    with SqlConnect(database_file) as cursor:
+        db_data = cursor.execute(f'''
+            SELECT * FROM {table};
+                ''').fetchall()
+    output = 'Date     Deposit    Withdraw     Description'
     for i in db_data:
         output += f'\n{i[0]}   {i[1]}     {i[2]}     {i[3]}'
     return output
+
+def is_table(table):
+    with SqlConnect(database_file) as cursor:
+        value = cursor.execute(f'''
+            SELECT name FROM sqlite_master;
+                ''').fetchone()
+    if table in value:
+        return True
+    else:
+        return False
+
+def sql_command(command):
+    with SqlConnect(database_file) as cursor:
+        cursor.execute(command)
+        data_fetched = cursor.fetchall()
+    output_str = f'# Sql command:\n{command}\n# Sql output:'
+    for i in data_fetched:
+        output_str += f'\n    {i}'
+    return output_str

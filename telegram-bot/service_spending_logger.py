@@ -4,25 +4,24 @@ from datetime import datetime
 from telegram.ext import Updater, CommandHandler
 from telegram import ChatAction
 from functools import wraps
-
 import logging
+
 import sql_adapter_spending_logger as sql_adapter
+import config
 
 # Begin - Logging features
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(filename=config.log_file, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %I:%M:%S)', level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.info('Telegram service started\n')
 # End - Logging features
 
 # Begin - Decorators function
-ALLOWED_USER_ID = [1133316229,]
 def restricted(func):
     @wraps(func)
     def wrapped(update, context, *args, **kwargs):
         user_id = update.effective_user.id
-        if user_id not in ALLOWED_USER_ID:
-            print("Unauthorized access denied for {}.".format(user_id))
-            update.message.reply_text('This is a private bot. However, if you\'re interested, go to https://github.com/akirasy/random-apps for source code')
+        if user_id not in config.ALLOWED_USER_ID:
+            update.message.reply_text('This is a private bot.\nHowever, if you\'re interested, enter /source to get source code')
+            logger.error(f'Unauthorized access. Access denied for {user_id}')
             return
         return func(update, context, *args, **kwargs)
     return wrapped
@@ -40,9 +39,7 @@ send_typing_action = send_action(ChatAction.TYPING)
 @send_typing_action
 def start(update, context):
     update.message.reply_text('''
-Hi, I am a telegram bot. I can help you to track and log your money spending.
-If you happened to stumbled upon this bot, and somehow has interest to use this bot, get the source code.
-
+Hi, I am a telegram bot.\nI can help you to track and log your money spending.\n
 /help - show help and use instructions
 /source - get the source from git
         ''') 
@@ -51,8 +48,7 @@ If you happened to stumbled upon this bot, and somehow has interest to use this 
 @send_typing_action
 def source_code(update, context):
     update.message.reply_text('''
-Developer: akirasy
-Code (MIT License): 
+Developer: akirasy\n\nCode (MIT License): 
 https://github.com/akirasy/random-apps.git
         ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
@@ -61,33 +57,29 @@ https://github.com/akirasy/random-apps.git
 @restricted
 def show_help(update, context):
     update.message.reply_text('''
-Command - Description
-     Example - use cases
-
+Command summary:\n
 /help - show this message
-     /help
-
-/add - add entry to database
-     /add 45.65 fuel 
-
-/check - check database entry
-     /check
-     /check Jul20
+/add {price} {item_name} - add entry to database
+/check - current month database entry
+/check {month} - desired month database entry
         ''')
+    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 @send_typing_action
 @restricted
 def add_entry(update, context):
     try:
-        command, price, item = update.message.text.split(' ', 2)
+        command, price, item = update.message.text.split(maxsplit=2)
         month = datetime.now().strftime('%b%y')
-        sql_adapter.add_data(month, item, price)
-        update.message.reply_text(f'These data added:\n{item}: RM{price}')
-        logger.info(f'Add data: [{item}, {price}] to table {month}')
-    except ValueError:
-        update.message.reply_text(f'An error occured. Please check /help for usage instructions.')
-        logger.error(f'An error occured at {add_entry.__name__}.')
-    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+        sql_adapter.add_data(month, item, float(price))
+        update.message.reply_text(f'''
+These data added:
+    {item}: RM{price}
+            ''')
+        logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+    except ValueError as error:
+        update.message.reply_text(f'An error occured.\n{error}\nPlease check /help for usage instructions.')
+        logger.error(f'An error occured. {error}')
 
 @send_typing_action
 @restricted
@@ -95,34 +87,40 @@ def check_entry(update, context):
     try:
         if len(update.message.text.split()) == 1:
             month = datetime.now().strftime('%b%y')
-            total_spending, detailed_spending = sql_adapter.get_data(month)
         elif len(update.message.text.split()) == 2:
             command, month = update.message.text.split()
-            total_spending, detailed_spending = sql_adapter.get_data(month)
+        total_spending, detailed_spending = sql_adapter.get_data(month)
         update.message.reply_text(f'''
----- Spending summary for {month} ----
-
-Total: RM{total_spending}
-
+Spending summary for {month}
+    Total: RM{total_spending}\n
 Detailed spending items:
 {detailed_spending}
             ''')
-        logger.info(f'Check data: Retrieve data from table {month}')
-    except ValueError:
-        update.message.reply_text(f'An error occured. Please check /help for usage instructions.')
-        logger.error(f'An error occured at {check_entry.__name__}.')
+        logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+    except ValueError as error:
+        update.message.reply_text(f'An error occured.\n{error}\nPlease check /help for usage instructions.')
+        logger.error(f'An error occured. {error}')
+
+@send_typing_action
+@restricted
+def sql_command(update, context):
+    command, sql_input = update.message.text.split(maxsplit=1)
+    output = sql_adapter.sql_command(sql_input)
+    update.message.reply_text(output)
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 def main():
-    updater = Updater(token='BOT_TOKEN', use_context=True)
+    updater = Updater(token=config.BOT_TOKEN, use_context=True)
     
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('source', source_code))
     updater.dispatcher.add_handler(CommandHandler('help', show_help))
+    updater.dispatcher.add_handler(CommandHandler('sql', sql_command))
     updater.dispatcher.add_handler(CommandHandler('add', add_entry))
     updater.dispatcher.add_handler(CommandHandler('check', check_entry))
 
     updater.start_polling()
+    logger.info('Telegram service started.')
     updater.idle()
 
 if __name__ == '__main__':

@@ -4,26 +4,25 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 from telegram import ChatAction
 from functools import wraps
 from datetime import datetime
-
 import pytz
 import logging
+
 import sql_adapter_payment_reminder as sql_adapter
+import config
 
 # Begin - Logging features
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(filename=config.log_file, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %I:%M:%S)', level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.info('Loading telegram service.')
 # End - Logging features
 
 # Begin - Decorators function
-ALLOWED_USER_ID = [1133316229,]
-def restrict_user(func):
+def restricted(func):
     @wraps(func)
     def wrapped(update, context, *args, **kwargs):
         user_id = update.effective_user.id
-        if user_id not in ALLOWED_USER_ID:
-            print("Unauthorized access denied for {}.".format(user_id))
-            update.message.reply_text('This is a private bot.')
+        if user_id not in config.ALLOWED_USER_ID:
+            update.message.reply_text('This is a private bot.\nHowever, if you\'re interested, enter /source to get source code')
+            logger.error(f'Unauthorized access. Access denied for {user_id}')
             return
         return func(update, context, *args, **kwargs)
     return wrapped
@@ -40,16 +39,10 @@ send_typing_action = send_action(ChatAction.TYPING)
 
 # Begin - Telegram function 
 
-ALLOWED_USER_ID[0] = ALLOWED_USER_ID[0]
-
 @send_typing_action
 def start(update, context):
     update.message.reply_text('''
-I will remind you about your monthly bills. Each and every Month.
-
-If you're interested to use this bot, feel free to browse the source code.
-
-Command - Description
+I will remind you about your monthly bills. Each and every Month.\n
 /help - show help message
 /source - show source code in git
         ''')
@@ -58,61 +51,72 @@ Command - Description
 @send_typing_action
 def source_code(update, context):
     update.message.reply_text('''
-Developer: akirasy
-Code (MIT License):
+Developer: akirasy\n\nCode (MIT License): 
 https://github.com/akirasy/random-apps.git
         ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 @send_typing_action
+@restricted
 def help_message(update, context):
     update.message.reply_text('''
-Command - Description
-
+Command summary:\n
 /help - Show this message
 /check - Check current month payment
-/check month - Check respective month payment
-/paid id - Update sqlite payment database
-
-I hope this helps.
+/check {month} - Check respective month payment
+/paid {id} {amount} - Update sqlite payment database
         ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 @send_typing_action
-@restrict_user
+@restricted
 def deploy_default_table(update, context):
     month = datetime.now().strftime('%b%y')
     sql_adapter.create_table(month)
-    update.message.reply_text(f'New table {month} created.')
-    logger.info('New table {month} created.')
+    update.message.reply_text(f'New table -{month}- created.')
+    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 @send_typing_action
-@restrict_user
+@restricted
 def check_payment(update, context):
     try:
         if len(update.message.text.split()) == 1:
             month = datetime.now().strftime('%b%y')
-            db_data = sql_adapter.check_payment(month)
         elif len(update.message.text.split()) == 2:
             command, month = update.message.text.split()
-            db_data = sql_adapter.check_payment(month)
+        db_data = sql_adapter.check_payment(month)
         reply_message = f'Payment status for {month}\n\n' + db_data
         update.message.reply_text(reply_message)
-    except ValueError:
-        update.message.reply_text('Something went wrong. Refer /help for usage instructions.')
-    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+        logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+    except ValueError as error:
+        update.message.reply_text(f'An error occured.\n{error}\nPlease check /help for usage instructions.')
+        logger.error(f'An error occured. {error}')
 
 @send_typing_action
-@restrict_user
+@restricted
 def paid(update, context):
     try:
-        command, rowid = update.message.text.split()
+        command, rowid, price = update.message.text.split()
         month = datetime.now().strftime('%b%y')
-        sql_adapter.update_data(month, rowid)
+        sql_adapter.update_data(month, rowid, price)
         rowid_name = sql_adapter.get_rowid_name(month, rowid)
-        update.message.reply_text('Thanks. You have paid {} on {}'.format(rowid_name, datetime.now().strftime('%d-%b-%y')))
-    except ValueError:
-        update.message.reply_text(f'An error occured. Please check /help for usage instructions.')
+        update.message.reply_text(f'''
+Thanks. You have made payment.
+    Item: {rowid_name}
+    Price: RM{price}
+    Date: {datetime.now().strftime("%d-%b-%y")}
+            ''')
+        logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+    except ValueError as error:
+        update.message.reply_text(f'An error occured.\n{error}\nPlease check /help for usage instructions.')
+        logger.error(f'An error occured. {error}')
+
+@send_typing_action
+@restricted
+def sql_command(update, context):
+    command, sql_input = update.message.text.split(maxsplit=1)
+    output = sql_adapter.sql_command(sql_input)
+    update.message.reply_text(output)
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 def new_month(context: CallbackContext):
@@ -121,14 +125,12 @@ def new_month(context: CallbackContext):
 
 def generic_reminder(payment, due_date):
     def inside_func(context: CallbackContext):
-        text = '''
-You have planned to make payment for
-{} today.
-Please provide payment before
-{}-{}
-to avoid payment penalty.
-        '''.format(payment, due_date, datetime.now().strftime('%b-%y'))
-        context.bot.send_message(chat_id=ALLOWED_USER_ID[0], text=text)
+        context.bot.send_message(chat_id=config.ALLOWED_USER_ID[0], text=f'''
+You have planned to make payment today:
+    Payment: {payment}
+    Due date: {due_date}-{datetime.now().strftime("%b-%y")}
+Please provide payment before due date to avoid payment penalty.
+        ''')
     return inside_func
 car_proton_iriz         = generic_reminder('Proton Iriz', 30)
 car_honda_hrv           = generic_reminder('Honda HRV', 30)
@@ -149,21 +151,18 @@ personal_mara_loan      = generic_reminder('Mara education loan', 20)
 
 def main():
     tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
-    job_time = tz_kul.localize(datetime.strptime('10:00','%H:%M'))
-    #job_time_dummy = tz_kul.localize(datetime.strptime('7-7-20 17:38','%d-%m-%y %H:%M'))
-    #job_time_now = tz_kul.localize(datetime.now())
+    job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
 
-    updater = Updater(token='BOT_TOKEN', use_context=True)
+    updater = Updater(token=config.BOT_TOKEN, use_context=True)
     
-    logger.info('Instantiate Telegram Handlers.')
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('source', source_code))
     updater.dispatcher.add_handler(CommandHandler('help', help_message))
+    updater.dispatcher.add_handler(CommandHandler('sql', sql_command))
     updater.dispatcher.add_handler(CommandHandler('paid', paid))
     updater.dispatcher.add_handler(CommandHandler('check', check_payment))
     updater.dispatcher.add_handler(CommandHandler('deploy', deploy_default_table))
 
-    logger.info('Initializing Telegram JobQueue.')
     updater.job_queue.run_monthly(callback=new_month            , day=1 , when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=car_proton_iriz      , day=26, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=car_honda_hrv        , day=26, when=job_time, day_is_strict=False)
@@ -180,8 +179,8 @@ def main():
     updater.job_queue.run_monthly(callback=personal_saga_abah   , day=2 , when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=personal_mara_loan   , day=10, when=job_time, day_is_strict=False)
 
-    logger.info('Telegram service is running..')
     updater.start_polling()
+    logger.info('Telegram service started.')
     updater.idle()
 
 if __name__ == '__main__':

@@ -2,6 +2,12 @@
 Telegram Bot is very useful and so is interesting. I use it in many different cases.<br>
 I decided to put all my telegram bot in this folder for future reference. I might need it later.
 
+## Use instructions
+Edit file `config.py`
+1. Enter your `BOT_TOKEN`
+2. Add `user_id` to `ALLOWED_USER_ID` (use telegram bot [@userinfobot](https://t.me/userinfobot) to get your `user_id`)
+3. Edit database `filename` (optional)
+
 ## Bots
 #### 1. Payment Reminder
 I wish somebody could remind me to pay up those staggering bills each month.<br>
