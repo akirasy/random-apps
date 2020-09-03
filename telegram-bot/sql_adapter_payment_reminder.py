@@ -44,17 +44,20 @@ def create_table(table):
                 ('Saga abah'    ,),
                 ('Mara'         ,),]
         cursor.executemany(f'''
-            INSERT INTO {table} VALUES (?);
+            INSERT INTO {table} (item) VALUES (?);
                 ''', default_value)
 
 def check_payment(table):
     with SqlConnect(database_file) as cursor:
         db_data = cursor.execute(f'''
-            SELECT rowid, item, paid FROM {table};
+            SELECT rowid, paid, item, price FROM {table};
                 ''').fetchall()
-    item_str = f'ID - Status - Item\n'
+        total = cursor.execute(f'''
+            SELECT SUM(price) FROM {table}
+                ''').fetchone()
+    item_str = f'Total price: RM{total[0]}\n\nID - Status - Item\n'
     for i in db_data:
-        item_str += f'{i[0]}.  {i[2]}   -   {i[1]}\n'
+        item_str += f'{i[0]}.  {i[1]}   -   {i[2]} (RM{i[3]})\n'
     return item_str
 
 def update_data(table, rowid, price):

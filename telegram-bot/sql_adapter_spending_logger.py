@@ -20,11 +20,14 @@ class SqlConnect:
         self.connection.commit()
         self.connection.close()
 
-def add_data(table, item, price):
+def create_table(table):
     with SqlConnect(database_file) as cursor:
         cursor.execute(f'''
-            CREATE TABLE IF NOT EXISTS {table} (item TEXT, price REAL);
+            CREATE TABLE {table} (item TEXT, price REAL);
                 ''')
+
+def add_data(table, item, price):
+    with SqlConnect(database_file) as cursor:
         cursor.execute(f'''
             INSERT INTO {table} (item, price) VALUES (?, ?);
                 ''', [item, price])
@@ -34,7 +37,6 @@ def get_data(table):
         total_spending = cursor.execute(f'''
             SELECT SUM(price) FROM {table};
                 ''').fetchone()
-    with SqlConnect(database_file) as cursor:
         db_data = cursor.execute(f'''
             SELECT rowid, item, price FROM {table};
                 ''').fetchall()

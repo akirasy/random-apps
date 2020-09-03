@@ -2,16 +2,16 @@
 
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from telegram import ChatAction
+
+import pytz, logging
 from functools import wraps
 from datetime import datetime
-import pytz
-import logging
 
 import sql_adapter_payment_reminder as sql_adapter
 import config
 
 # Begin - Logging features
-logging.basicConfig(filename=config.log_file, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %I:%M:%S)', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %H:%M:%S)', level=logging.INFO)
 logger = logging.getLogger(__name__)
 # End - Logging features
 
@@ -38,7 +38,6 @@ send_typing_action = send_action(ChatAction.TYPING)
 # End - Decorators function
 
 # Begin - Telegram function 
-
 @send_typing_action
 def start(update, context):
     update.message.reply_text('''
@@ -61,10 +60,11 @@ https://github.com/akirasy/random-apps.git
 def help_message(update, context):
     update.message.reply_text('''
 Command summary:\n
-/help - Show this message
+/help - Show this message\n
 /check - Check current month payment
-/check {month} - Check respective month payment
-/paid {id} {amount} - Update sqlite payment database
+/check {month} - Check respective month payment\n
+/paid {id} {amount} - Update sqlite payment database\n
+/sql {sql_command} - execute sql command
         ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
@@ -132,47 +132,46 @@ You have planned to make payment today:
 Please provide payment before due date to avoid payment penalty.
         ''')
     return inside_func
-car_proton_iriz         = generic_reminder('Proton Iriz', 30)
-car_honda_hrv           = generic_reminder('Honda HRV', 30)
-cc_maybank              = generic_reminder('CC - Maybank', 26)
-cc_cimb                 = generic_reminder('CC - CIMB', 16)
-services_unifi_lite     = generic_reminder('Unifi Lite', 30)
-services_unifi_mobile   = generic_reminder('Unifi Mobile', 22)
-services_maid           = generic_reminder('Maid - Tia Minah', 10)
-utility_house_rent      = generic_reminder('House rent', 28)
-utility_water           = generic_reminder('Water utility bill', 28)
-utility_tnb             = generic_reminder('TNB utility bill', 30)
-personal_mother         = generic_reminder('Mak - Kamariah', 15)
-personal_wife           = generic_reminder('Wife - Afifah syg', 15)
+car_proton_iriz         = generic_reminder('Proton Iriz'        , 30)
+car_honda_hrv           = generic_reminder('Honda HRV'          , 30)
+cc_maybank              = generic_reminder('CC - Maybank'       , 26)
+cc_cimb                 = generic_reminder('CC - CIMB'          , 16)
+services_unifi_lite     = generic_reminder('Unifi Lite'         , 30)
+services_unifi_mobile   = generic_reminder('Unifi Mobile'       , 22)
+services_maid           = generic_reminder('Maid - Tia Minah'   , 10)
+utility_house_rent      = generic_reminder('House rent'         , 28)
+utility_water           = generic_reminder('Water utility bill' , 28)
+utility_tnb             = generic_reminder('TNB utility bill'   , 30)
+personal_mother         = generic_reminder('Mak - Kamariah'     , 15)
+personal_wife           = generic_reminder('Wife - Afifah syg'  , 15)
 personal_saga_abah      = generic_reminder('Saga abah - Jamilah', 10)
 personal_mara_loan      = generic_reminder('Mara education loan', 20)
-
 # End - Telegram function
 
 def main():
-    tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
-    job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
-
     updater = Updater(token=config.BOT_TOKEN, use_context=True)
-    
-    updater.dispatcher.add_handler(CommandHandler('start', start))
+
+    updater.dispatcher.add_error_handler(error_callback)
+    updater.dispatcher.add_handler(CommandHandler('start' , start))
     updater.dispatcher.add_handler(CommandHandler('source', source_code))
-    updater.dispatcher.add_handler(CommandHandler('help', help_message))
-    updater.dispatcher.add_handler(CommandHandler('sql', sql_command))
-    updater.dispatcher.add_handler(CommandHandler('paid', paid))
-    updater.dispatcher.add_handler(CommandHandler('check', check_payment))
+    updater.dispatcher.add_handler(CommandHandler('help'  , help_message))
+    updater.dispatcher.add_handler(CommandHandler('sql'   , sql_command))
+    updater.dispatcher.add_handler(CommandHandler('paid'  , paid))
+    updater.dispatcher.add_handler(CommandHandler('check' , check_payment))
     updater.dispatcher.add_handler(CommandHandler('deploy', deploy_default_table))
 
+    tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
+    job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
     updater.job_queue.run_monthly(callback=new_month            , day=1 , when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=car_proton_iriz      , day=26, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=car_honda_hrv        , day=26, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=cc_maybank           , day=7 , when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=cc_cimb              , day=2 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=services_unifi_lite  , day=7 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=services_unifi_mobile, day=7 , when=job_time, day_is_strict=False)
+    updater.job_queue.run_monthly(callback=services_unifi_lite  , day=10, when=job_time, day_is_strict=False)
+    updater.job_queue.run_monthly(callback=services_unifi_mobile, day=10, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=services_maid        , day=2 , when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=utility_house_rent   , day=26, when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=utility_water        , day=7 , when=job_time, day_is_strict=False)
+    updater.job_queue.run_monthly(callback=utility_water        , day=15, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=utility_tnb          , day=15, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=personal_mother      , day=2 , when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=personal_wife        , day=2 , when=job_time, day_is_strict=False)

@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
-from datetime import datetime
-from telegram.ext import Updater, CommandHandler
+from telegram.ext import Updater, CommandHandler, CallbackContext
 from telegram import ChatAction
+
+import pytz, logging
 from functools import wraps
-import logging
+from datetime import datetime
 
 import sql_adapter_spending_logger as sql_adapter
 import config
 
 # Begin - Logging features
-logging.basicConfig(filename=config.log_file, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %I:%M:%S)', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %H:%M:%S)', level=logging.INFO)
 logger = logging.getLogger(__name__)
 # End - Logging features
 
@@ -36,6 +37,7 @@ def send_action(action):
 send_typing_action = send_action(ChatAction.TYPING)
 # End - Decorators function
 
+# Begin - Telegram function 
 @send_typing_action
 def start(update, context):
     update.message.reply_text('''
@@ -58,10 +60,11 @@ https://github.com/akirasy/random-apps.git
 def show_help(update, context):
     update.message.reply_text('''
 Command summary:\n
-/help - show this message
-/add {price} {item_name} - add entry to database
+/help - show this message\n
+/add {price} {item_name} - add entry to database\n
 /check - current month database entry
-/check {month} - desired month database entry
+/check {month} - desired month database entry\n
+/sql {sql_command} - execute sql command
         ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
@@ -109,6 +112,11 @@ def sql_command(update, context):
     update.message.reply_text(output)
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
+def new_month(context: CallbackContext):
+    month = datetime.now().strftime('%b%y')
+    sql_adapter.create_table(month)
+# End - Telegram functions
+
 def main():
     updater = Updater(token=config.BOT_TOKEN, use_context=True)
     
@@ -118,6 +126,10 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('sql', sql_command))
     updater.dispatcher.add_handler(CommandHandler('add', add_entry))
     updater.dispatcher.add_handler(CommandHandler('check', check_entry))
+
+    tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
+    job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
+    updater.job_queue.run_monthly(callback=new_month, day=1, when=job_time)
 
     updater.start_polling()
     logger.info('Telegram service started.')

@@ -19,6 +19,6 @@ database = 'database.db'
 log = 'logfile.txt'
 
 # Combine relative path and filename
-BASE_DIR = pathlib.Path(pathlib.Path(__file__).resolve()).parent
+BASE_DIR = pathlib.Path(__file__).resolve().parent
 database_file = BASE_DIR.joinpath(database)
 log_file = BASE_DIR.joinpath(log)

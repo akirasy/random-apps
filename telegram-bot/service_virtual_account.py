@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
-from datetime import datetime
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from telegram import ChatAction
+
+import pytz, logging
 from functools import wraps
-import logging
-import pytz
+from datetime import datetime
 
 import sql_adapter_virtual_account as sql_adapter
 import config
 
 # Begin - Logging features
-logging.basicConfig(filename=config.log_file, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %I:%M:%S)', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %H:%M:%S)', level=logging.INFO)
 logger = logging.getLogger(__name__)
 # End - Logging features
 
@@ -38,7 +38,6 @@ send_typing_action = send_action(ChatAction.TYPING)
 # End - Decorators function
 
 # Begin - Telegram functions
-
 @send_typing_action
 def start(update, context):
     update.message.reply_text('''
@@ -68,7 +67,8 @@ Command summary:\n
 /deposit {amount} {description} - add money to account
 /withdraw {amount} {description} - take out money from account\n
 /summary - show current month database
-/summary {month} - show previous database
+/summary {month} - show previous database\n
+/sql {sql_command} - execute sql command
         ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
@@ -132,12 +132,22 @@ Transaction completed. Details are as follows:
         update.message.reply_text(f'An error occured.\n{error}\nPlease check /help for usage instructions.')
         logger.error(f'An error occured. {error}')
 
+@send_typing_action
+@restricted
 def summary(update, context):
     if len(update.message.text.split()) == 1:
         month = datetime.now().strftime('%b%y')
     elif len(update.message.text.split()) == 2:
         command, month = update.message.text.split()
     output = sql_adapter.get_statement(month)
+    update.message.reply_text(output)
+    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+
+@send_typing_action
+@restricted
+def sql_command(update, context):
+    command, sql_input = update.message.text.split(maxsplit=1)
+    output = sql_adapter.sql_command(sql_input)
     update.message.reply_text(output)
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
@@ -156,15 +166,6 @@ def new_month(context: CallbackContext):
     deposit, withdraw, balance = sql_adapter.check_balance(prev_table)
     sql_adapter.deposit(month, date, balance, 'baki bulan lepas')
     logger.info(f'Monthly automated task: New table {month} created.')
-
-@send_typing_action
-@restricted
-def sql_command(update, context):
-    command, sql_input = update.message.text.split(maxsplit=1)
-    output = sql_adapter.sql_command(sql_input)
-    update.message.reply_text(output)
-    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
-
 # End - Telegram functions
 
 def main():
