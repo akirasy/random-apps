@@ -4,12 +4,10 @@ from telegram.ext import Updater, CommandHandler, CallbackContext, Filters
 from telegram import ChatAction
 
 import os, sys, threading, logging
-import pytz
+import subprocess
 from functools import wraps
-from datetime import datetime
 
-import sql_adapter_spending_logger as sql_adapter
-import config
+import config_gitpush as config
 
 # Begin - Logging features
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %H:%M:%S)', level=logging.INFO)
@@ -38,14 +36,14 @@ def send_action(action):
 send_typing_action = send_action(ChatAction.TYPING)
 # End - Decorators function
 
-# Begin - Telegram function 
+# Begin - Telegram functions
 @send_typing_action
 def start(update, context):
     update.message.reply_text('''
-Hi, I am a telegram bot.\nI can help you to track and log your money spending.\n
+Hi, I am a telegram bot.\n
 /help - show help and use instructions
 /source - get the source from git
-        ''') 
+        ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 @send_typing_action
@@ -61,66 +59,40 @@ https://github.com/akirasy/random-apps.git
 def show_help(update, context):
     update.message.reply_text('''
 Command summary:\n
-/help - show this message\n
-/add {price} {item_name} - add entry to database\n
-/check - current month database entry
-/check {month} - desired month database entry\n
-/sql {sql_command} - execute sql command
+/help - show help and use instructions\n
+/update - update git
+/deploy - deploy to system\n
+/git_clone - initialize git - only use on first use
+/restart - reload Telegram Bot
         ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 @send_typing_action
 @restricted
-def add_entry(update, context):
-    try:
-        command, price, item = update.message.text.split(maxsplit=2)
-        month = datetime.now().strftime('%b%y')
-        sql_adapter.add_data(month, item, float(price))
-        update.message.reply_text(f'''
-These data added:
-    {item}: RM{price}
-            ''')
-        logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
-    except ValueError as error:
-        update.message.reply_text(f'An error occured.\n{error}\nPlease check /help for usage instructions.')
-        logger.error(f'An error occured. {error}')
-
-@send_typing_action
-@restricted
-def check_entry(update, context):
-    try:
-        if len(update.message.text.split()) == 1:
-            month = datetime.now().strftime('%b%y')
-        elif len(update.message.text.split()) == 2:
-            command, month = update.message.text.split()
-        total_spending, detailed_spending = sql_adapter.get_data(month)
-        update.message.reply_text(f'''
-Spending summary for {month}
-    Total: RM{total_spending}\n
-Detailed spending items:
-{detailed_spending}
-            ''')
-        logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
-    except ValueError as error:
-        update.message.reply_text(f'An error occured.\n{error}\nPlease check /help for usage instructions.')
-        logger.error(f'An error occured. {error}')
-
-@send_typing_action
-@restricted
-def sql_command(update, context):
-    command, sql_input = update.message.text.split(maxsplit=1)
-    output = sql_adapter.sql_command(sql_input)
-    update.message.reply_text(output)
+def git_update(update, context):
+    update.message.reply_text('Updating git to latest version.')
+    subprocess.run(['git', 'pull'], cwd=config.GIT_ROOT)
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
-def new_month(context: CallbackContext):
-    month = datetime.now().strftime('%b%y')
-    sql_adapter.create_table(month)
+@send_typing_action
+@restricted
+def git_deploy(update, context):
+    update.message.reply_text('Copying file from git to local directory.')
+    for i in config.list_source_destination:
+        subprocess.run(['cp', i[0], i[1]])
+    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+
+@send_typing_action
+@restricted
+def git_clone(update, context):
+    update.message.reply_text('Running git clone.')
+    subprocess.run(['git', 'clone', config.git_remote], cwd=config.GIT_ROOT.parent)
+    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 # End - Telegram functions
 
 def main():
     updater = Updater(token=config.BOT_TOKEN, use_context=True)
-    
+
     def stop_and_restart():
         updater.stop()
         os.execl(sys.executable, sys.executable, *sys.argv)
@@ -131,17 +103,13 @@ def main():
         logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
         logger.info('Telegram service will reload. Please wait...')
 
-    updater.dispatcher.add_handler(CommandHandler('start'  , start))
-    updater.dispatcher.add_handler(CommandHandler('source' , source_code))
-    updater.dispatcher.add_handler(CommandHandler('help'   , show_help))
-    updater.dispatcher.add_handler(CommandHandler('restart', restart_telegram, filters=Filters.user(config.ALLOWED_USER_ID[0])))
-    updater.dispatcher.add_handler(CommandHandler('sql'    , sql_command))
-    updater.dispatcher.add_handler(CommandHandler('add'    , add_entry))
-    updater.dispatcher.add_handler(CommandHandler('check'  , check_entry))
-
-    tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
-    job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
-    updater.job_queue.run_monthly(callback=new_month, day=1, when=job_time)
+    updater.dispatcher.add_handler(CommandHandler('start'     , start))
+    updater.dispatcher.add_handler(CommandHandler('source'    , source_code))
+    updater.dispatcher.add_handler(CommandHandler('help'      , show_help))
+    updater.dispatcher.add_handler(CommandHandler('restart'   , restart_telegram, filters=Filters.user(config.ALLOWED_USER_ID[0])))
+    updater.dispatcher.add_handler(CommandHandler('update'    , git_update))
+    updater.dispatcher.add_handler(CommandHandler('deploy'    , git_clone))
+    updater.dispatcher.add_handler(CommandHandler('git_clone' , git_clone))
 
     updater.start_polling()
     logger.info('Telegram service started.')

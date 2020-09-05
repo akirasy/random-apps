@@ -32,6 +32,7 @@ def create_table(table):
                 ('Iriz'         ,),
                 ('HRV'          ,),
                 ('CC Maybank'   ,),
+                ('CC Shopee'    ,),
                 ('CC CIMB'      ,),
                 ('Unifi Lite'   ,),
                 ('Unifi Mobile' ,),

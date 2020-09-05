@@ -20,6 +20,9 @@ I intend to use telegram bot to log and track my spending habit.
 I have childrens and I thought them about working and pays. They work, they earn some money. So I create a virtual account for them.
 - They work on something? `/deposit`
 - Want to buy something? `/withdraw`
+#### 4. GitPush Bot
+- Easy deploy to my raspberry pi
+- Just git pull it
 
 ## Upcoming Bots
 If I have some telegram bot ideas, I'd be sure to put it here. So I can code it later.

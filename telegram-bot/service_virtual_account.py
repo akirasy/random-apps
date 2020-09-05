@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, CallbackContext, Filters
 from telegram import ChatAction
 
-import pytz, logging
+import os, sys, threading, logging
+import pytz
 from functools import wraps
 from datetime import datetime
 
@@ -171,14 +172,25 @@ def new_month(context: CallbackContext):
 def main():
     updater = Updater(token=config.BOT_TOKEN, use_context=True)
 
-    updater.dispatcher.add_handler(CommandHandler('start', start))
-    updater.dispatcher.add_handler(CommandHandler('source', source_code))
-    updater.dispatcher.add_handler(CommandHandler('help', show_help))
-    updater.dispatcher.add_handler(CommandHandler('sql', sql_command))
-    updater.dispatcher.add_handler(CommandHandler('check', check_balance))
-    updater.dispatcher.add_handler(CommandHandler('deposit', deposit))
+    def stop_and_restart():
+        updater.stop()
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    def restart_telegram(update, context):
+        update.message.reply_text('Bot is restarting...')
+        threading.Thread(target=stop_and_restart).start()
+        logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+        logger.info('Telegram service will reload. Please wait...')
+
+    updater.dispatcher.add_handler(CommandHandler('start'   , start))
+    updater.dispatcher.add_handler(CommandHandler('source'  , source_code))
+    updater.dispatcher.add_handler(CommandHandler('help'    , show_help))
+    updater.dispatcher.add_handler(CommandHandler('restart' , restart_telegram, filters=Filters.user(config.ALLOWED_USER_ID[0])))
+    updater.dispatcher.add_handler(CommandHandler('sql'     , sql_command))
+    updater.dispatcher.add_handler(CommandHandler('check'   , check_balance))
+    updater.dispatcher.add_handler(CommandHandler('deposit' , deposit))
     updater.dispatcher.add_handler(CommandHandler('withdraw', withdraw))
-    updater.dispatcher.add_handler(CommandHandler('summary', summary))
+    updater.dispatcher.add_handler(CommandHandler('summary' , summary))
 
     tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
     job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))

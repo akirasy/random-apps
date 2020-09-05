@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, CallbackContext, Filters
 from telegram import ChatAction
 
-import pytz, logging
+import os, sys, threading, logging
+import pytz
 from functools import wraps
 from datetime import datetime
 
@@ -64,16 +65,8 @@ Command summary:\n
 /check - Check current month payment
 /check {month} - Check respective month payment\n
 /paid {id} {amount} - Update sqlite payment database\n
-/sql {sql_command} - execute sql command
+/sql {sql_command} - execute sql command\n
         ''')
-    logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
-
-@send_typing_action
-@restricted
-def deploy_default_table(update, context):
-    month = datetime.now().strftime('%b%y')
-    sql_adapter.create_table(month)
-    update.message.reply_text(f'New table -{month}- created.')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
 @send_typing_action
@@ -135,10 +128,11 @@ Please provide payment before due date to avoid payment penalty.
 car_proton_iriz         = generic_reminder('Proton Iriz'        , 30)
 car_honda_hrv           = generic_reminder('Honda HRV'          , 30)
 cc_maybank              = generic_reminder('CC - Maybank'       , 26)
+cc_shopee               = generic_reminder('CC - Shopee'        , 26)
 cc_cimb                 = generic_reminder('CC - CIMB'          , 16)
-services_unifi_lite     = generic_reminder('Unifi Lite'         , 30)
+services_unifi_lite     = generic_reminder('Unifi Fibre'        , 30)
 services_unifi_mobile   = generic_reminder('Unifi Mobile'       , 22)
-services_maid           = generic_reminder('Maid - Tia Minah'   , 10)
+services_maid           = generic_reminder('Maid            '   , 10)
 utility_house_rent      = generic_reminder('House rent'         , 28)
 utility_water           = generic_reminder('Water utility bill' , 28)
 utility_tnb             = generic_reminder('TNB utility bill'   , 30)
@@ -151,14 +145,23 @@ personal_mara_loan      = generic_reminder('Mara education loan', 20)
 def main():
     updater = Updater(token=config.BOT_TOKEN, use_context=True)
 
-    updater.dispatcher.add_error_handler(error_callback)
-    updater.dispatcher.add_handler(CommandHandler('start' , start))
-    updater.dispatcher.add_handler(CommandHandler('source', source_code))
-    updater.dispatcher.add_handler(CommandHandler('help'  , help_message))
-    updater.dispatcher.add_handler(CommandHandler('sql'   , sql_command))
-    updater.dispatcher.add_handler(CommandHandler('paid'  , paid))
-    updater.dispatcher.add_handler(CommandHandler('check' , check_payment))
-    updater.dispatcher.add_handler(CommandHandler('deploy', deploy_default_table))
+    def stop_and_restart():
+        updater.stop()
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    def restart_telegram(update, context):
+        update.message.reply_text('Bot is restarting...')
+        threading.Thread(target=stop_and_restart).start()
+        logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
+        logger.info('Telegram service will reload. Please wait...')
+
+    updater.dispatcher.add_handler(CommandHandler('start'  , start))
+    updater.dispatcher.add_handler(CommandHandler('source' , source_code))
+    updater.dispatcher.add_handler(CommandHandler('help'   , help_message))
+    updater.dispatcher.add_handler(CommandHandler('restart', restart_telegram, filters=Filters.user(config.ALLOWED_USER_ID[0])))
+    updater.dispatcher.add_handler(CommandHandler('sql'    , sql_command))
+    updater.dispatcher.add_handler(CommandHandler('paid'   , paid))
+    updater.dispatcher.add_handler(CommandHandler('check'  , check_payment))
 
     tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
     job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
@@ -166,6 +169,7 @@ def main():
     updater.job_queue.run_monthly(callback=car_proton_iriz      , day=26, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=car_honda_hrv        , day=26, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=cc_maybank           , day=7 , when=job_time, day_is_strict=False)
+    updater.job_queue.run_monthly(callback=cc_shopee            , day=7 , when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=cc_cimb              , day=2 , when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=services_unifi_lite  , day=10, when=job_time, day_is_strict=False)
     updater.job_queue.run_monthly(callback=services_unifi_mobile, day=10, when=job_time, day_is_strict=False)
