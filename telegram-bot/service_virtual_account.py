@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# Imports
 from telegram.ext import Updater, CommandHandler, CallbackContext, Filters
 from telegram import ChatAction
 
@@ -11,18 +12,23 @@ from datetime import datetime
 import sql_adapter_virtual_account as sql_adapter
 import config
 
-# Begin - Logging features
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %H:%M:%S)', level=logging.INFO)
+# Logging features
+logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='(%d-%b-%y %H:%M:%S)',
+        level=logging.INFO)
 logger = logging.getLogger(__name__)
-# End - Logging features
 
-# Begin - Decorators function
+# Decorators function
 def restricted(func):
     @wraps(func)
     def wrapped(update, context, *args, **kwargs):
         user_id = update.effective_user.id
         if user_id not in config.ALLOWED_USER_ID:
-            update.message.reply_text('This is a private bot.\nHowever, if you\'re interested, enter /source to get source code')
+            update.message.reply_text('''
+This is a private bot.
+However, if you\'re interested,\
+enter /source to get source code.''')
             logger.error(f'Unauthorized access. Access denied for {user_id}')
             return
         return func(update, context, *args, **kwargs)
@@ -36,9 +42,8 @@ def send_action(action):
         return command_func    
     return decorator
 send_typing_action = send_action(ChatAction.TYPING)
-# End - Decorators function
 
-# Begin - Telegram functions
+# Telegram functions
 @send_typing_action
 def start(update, context):
     update.message.reply_text('''
@@ -61,15 +66,20 @@ https://github.com/akirasy/random-apps.git
 def show_help(update, context):
     update.message.reply_text('''
 Command summary:\n
-/help - show help and use instructions
-/source - get the source from git\n
-/check - check current account balance
-/check {month} - check previous account balance\n
-/deposit {amount} {description} - add money to account
-/withdraw {amount} {description} - take out money from account\n
-/summary - show current month database
-/summary {month} - show previous database\n
-/sql {sql_command} - execute sql command
+General:
+    /help - Show this message
+    /source - show source code in git
+    /reload - reload telegram service\n
+Current account:
+    /check - check current account balance
+    /summary - show current month database
+    /deposit {amount} {description} - add money to account
+    /withdraw {amount} {description} - take out money from account\n
+Account history:
+    /check {month} - check previous account balance
+    /summary {month} - show previous database\n
+Sqlite:
+    /sql {sql_command} - execute sql command
         ''')
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
@@ -167,8 +177,8 @@ def new_month(context: CallbackContext):
     deposit, withdraw, balance = sql_adapter.check_balance(prev_table)
     sql_adapter.deposit(month, date, balance, 'baki bulan lepas')
     logger.info(f'Monthly automated task: New table {month} created.')
-# End - Telegram functions
 
+# Main method
 def main():
     updater = Updater(token=config.BOT_TOKEN, use_context=True)
 
@@ -185,16 +195,19 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('start'   , start))
     updater.dispatcher.add_handler(CommandHandler('source'  , source_code))
     updater.dispatcher.add_handler(CommandHandler('help'    , show_help))
-    updater.dispatcher.add_handler(CommandHandler('restart' , restart_telegram, filters=Filters.user(config.ALLOWED_USER_ID[0])))
+    updater.dispatcher.add_handler(CommandHandler('reload'  , restart_telegram, filters=Filters.user(config.ALLOWED_USER_ID[0])))
     updater.dispatcher.add_handler(CommandHandler('sql'     , sql_command))
     updater.dispatcher.add_handler(CommandHandler('check'   , check_balance))
     updater.dispatcher.add_handler(CommandHandler('deposit' , deposit))
     updater.dispatcher.add_handler(CommandHandler('withdraw', withdraw))
     updater.dispatcher.add_handler(CommandHandler('summary' , summary))
 
-    tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
-    job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
-    updater.job_queue.run_monthly(callback=new_month, day=1, when=job_time)
+    try:
+        tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
+        job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
+        updater.job_queue.run_monthly(callback=new_month, day=1, when=job_time)
+    except TypeError as error:
+        logger.info('Monthly jobqueue not initialized.')
 
     updater.start_polling()
     logger.info('Telegram service started.')

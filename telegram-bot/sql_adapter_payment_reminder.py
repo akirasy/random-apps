@@ -30,11 +30,10 @@ def create_table(table):
                 ''')
         default_value = [
                 ('Iriz'         ,),
-                ('HRV'          ,),
                 ('CC Maybank'   ,),
                 ('CC Shopee'    ,),
                 ('CC CIMB'      ,),
-                ('Unifi Lite'   ,),
+                ('Unifi Fibre'  ,),
                 ('Unifi Mobile' ,),
                 ('Maid'         ,),
                 ('House rent'   ,),
@@ -42,8 +41,7 @@ def create_table(table):
                 ('TNB bill'     ,),
                 ('Mak'          ,),
                 ('Wife'         ,),
-                ('Saga abah'    ,),
-                ('Mara'         ,),]
+                ('Saga abah'    ,),]
         cursor.executemany(f'''
             INSERT INTO {table} (item) VALUES (?);
                 ''', default_value)
@@ -78,9 +76,8 @@ def get_rowid_name(table, rowid):
 
 def sql_command(command):
     with SqlConnect(database_file) as cursor:
-        cursor.execute(command)
-        data_fetched = cursor.fetchall()
-    output_str = f'# Sql command:\n{command}\n# Sql output:'
-    for i in data_fetched:
-        output_str += f'\n    {i}'
-    return output_str
+        data = cursor.execute(command).fetchall()
+    output = f'# Sql command:\n{command}\n# Sql output:'
+    for i in data:
+        output += f'\n    {i}'
+    return output

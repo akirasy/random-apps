@@ -16,9 +16,7 @@ ALLOWED_USER_ID = [1234567890,]
 
 # Edit filename here
 database = 'database.db'
-log = 'logfile.txt'
 
 # Combine relative path and filename
 BASE_DIR = pathlib.Path(__file__).resolve().parent
 database_file = BASE_DIR.joinpath(database)
-log_file = BASE_DIR.joinpath(log)

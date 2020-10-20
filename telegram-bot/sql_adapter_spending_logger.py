@@ -23,7 +23,7 @@ class SqlConnect:
 def create_table(table):
     with SqlConnect(database_file) as cursor:
         cursor.execute(f'''
-            CREATE TABLE {table} (item TEXT, price REAL);
+            CREATE TABLE {table} (item TEXT, price INTEGER);
                 ''')
 
 def add_data(table, item, price):
@@ -47,9 +47,8 @@ def get_data(table):
 
 def sql_command(command):
     with SqlConnect(database_file) as cursor:
-        cursor.execute(command)
-        data_fetched = cursor.fetchall()
-    output_str = f'# Sql command:\n{command}\n# Sql output:'
-    for i in data_fetched:
-        output_str += f'\n    {i}'
-    return output_str
+        data = cursor.execute(command).fetchall()
+    output = f'# Sql command:\n{command}\n# Sql output:'
+    for i in data:
+        output += f'\n    {i}'
+    return output

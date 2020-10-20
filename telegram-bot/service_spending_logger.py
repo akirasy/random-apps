@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# Imports
 from telegram.ext import Updater, CommandHandler, CallbackContext, Filters
 from telegram import ChatAction
 
@@ -11,18 +12,23 @@ from datetime import datetime
 import sql_adapter_spending_logger as sql_adapter
 import config
 
-# Begin - Logging features
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='(%d-%b-%y %H:%M:%S)', level=logging.INFO)
+# Logging features
+logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='(%d-%b-%y %H:%M:%S)',
+        level=logging.INFO)
 logger = logging.getLogger(__name__)
-# End - Logging features
 
-# Begin - Decorators function
+# Decorators function
 def restricted(func):
     @wraps(func)
     def wrapped(update, context, *args, **kwargs):
         user_id = update.effective_user.id
         if user_id not in config.ALLOWED_USER_ID:
-            update.message.reply_text('This is a private bot.\nHowever, if you\'re interested, enter /source to get source code')
+            update.message.reply_text('''
+This is a private bot.
+However, if you\'re interested,\
+enter /source to get source code.''')
             logger.error(f'Unauthorized access. Access denied for {user_id}')
             return
         return func(update, context, *args, **kwargs)
@@ -36,13 +42,13 @@ def send_action(action):
         return command_func    
     return decorator
 send_typing_action = send_action(ChatAction.TYPING)
-# End - Decorators function
 
-# Begin - Telegram function 
+# Telegram function 
 @send_typing_action
 def start(update, context):
     update.message.reply_text('''
-Hi, I am a telegram bot.\nI can help you to track and log your money spending.\n
+Hi, I am a telegram bot.
+I can help you to track and log your money spending.\n
 /help - show help and use instructions
 /source - get the source from git
         ''') 
@@ -61,7 +67,9 @@ https://github.com/akirasy/random-apps.git
 def show_help(update, context):
     update.message.reply_text('''
 Command summary:\n
-/help - show this message\n
+/help - Show this message
+/source - show source code in git
+/reload - reload telegram service\n
 /add {price} {item_name} - add entry to database\n
 /check - current month database entry
 /check {month} - desired month database entry\n
@@ -75,7 +83,7 @@ def add_entry(update, context):
     try:
         command, price, item = update.message.text.split(maxsplit=2)
         month = datetime.now().strftime('%b%y')
-        sql_adapter.add_data(month, item, float(price))
+        sql_adapter.add_data(month, item, price)
         update.message.reply_text(f'''
 These data added:
     {item}: RM{price}
@@ -116,8 +124,8 @@ def sql_command(update, context):
 def new_month(context: CallbackContext):
     month = datetime.now().strftime('%b%y')
     sql_adapter.create_table(month)
-# End - Telegram functions
 
+# Main method
 def main():
     updater = Updater(token=config.BOT_TOKEN, use_context=True)
     
@@ -134,14 +142,17 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('start'  , start))
     updater.dispatcher.add_handler(CommandHandler('source' , source_code))
     updater.dispatcher.add_handler(CommandHandler('help'   , show_help))
-    updater.dispatcher.add_handler(CommandHandler('restart', restart_telegram, filters=Filters.user(config.ALLOWED_USER_ID[0])))
+    updater.dispatcher.add_handler(CommandHandler('reload' , restart_telegram, filters=Filters.user(config.ALLOWED_USER_ID[0])))
     updater.dispatcher.add_handler(CommandHandler('sql'    , sql_command))
     updater.dispatcher.add_handler(CommandHandler('add'    , add_entry))
     updater.dispatcher.add_handler(CommandHandler('check'  , check_entry))
 
-    tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
-    job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
-    updater.job_queue.run_monthly(callback=new_month, day=1, when=job_time)
+    try:
+        tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
+        job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
+        updater.job_queue.run_monthly(callback=new_month, day=1, when=job_time)
+    except TypeError as error:
+        logger.info('Monthly jobqueue not initialized.')
 
     updater.start_polling()
     logger.info('Telegram service started.')
