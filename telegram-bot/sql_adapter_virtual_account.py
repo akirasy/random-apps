@@ -4,7 +4,7 @@ import pathlib
 import sqlite3
 from datetime import datetime
 
-import config
+import config_virtual_account as config
 
 # set pathname
 database_file = config.database_file
