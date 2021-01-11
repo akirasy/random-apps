@@ -63,7 +63,6 @@ def send_action(action):
 send_typing_action = send_action(ChatAction.TYPING)
 
 # Telegram functions
-
 @send_typing_action
 def start(update, context):
     update.message.reply_text(

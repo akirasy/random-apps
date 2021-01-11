@@ -17,12 +17,16 @@ I intend to use telegram bot to log and track my spending habit.
 - Add this to the log. Add that to the log. `/add`
 - How many have I spent so far? `/check`
 #### 3. Virtual Bank Account
-I have childrens and I thought them about working and pays. They work, they earn some money. So I create a virtual account for them.
+I have childrens and I thought them about working and pays. They work, they earn some money.
+So I create a virtual account for them. Create a telegram group and add this bot to the group.
+Parent and child can check account status from the group.
+- What's the balance? `/check`
 - They work on something? `/deposit`
 - Want to buy something? `/withdraw`
-#### 4. GitPush Bot
+#### 4. RaspberryPi Bot
 - Easy deploy to my raspberry pi
 - Just git pull it
+- Also can be used to restart and issue some other command
 
 ## Upcoming Bots
 If I have some telegram bot ideas, I'd be sure to put it here. So I can code it later.

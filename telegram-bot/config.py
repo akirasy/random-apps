@@ -6,13 +6,14 @@
 import pathlib
 
 # Create your bot from @BotFather and put the given BOT_TOKEN here.
-BOT_TOKEN = 'BOT_TOKEN'
+BOT_TOKEN = '{BOT_TOKEN}'
 
 # Insert your telegram user id by using @userinfobot
 # This bot displays user info when you forward a message to it.
 # Credits: https://github.com/nadam/userinfobot
 # Example: ALLOWED_USER_ID = [1133316229,]
-ALLOWED_USER_ID = [1234567890,]
+ALLOWED_USER_ID = [1234567899,]
+DEVELOPER_ID = 1234567899 # Only accept one user
 
 # Edit filename here
 database = 'database.db'
@@ -20,3 +21,4 @@ database = 'database.db'
 # Combine relative path and filename
 BASE_DIR = pathlib.Path(__file__).resolve().parent
 database_file = BASE_DIR.joinpath(database)
+logging_file  = BASE_DIR.joinpath('logcat.log')

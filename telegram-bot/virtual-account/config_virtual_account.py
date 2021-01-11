@@ -13,7 +13,7 @@ BOT_TOKEN = '{BOT_TOKEN}'
 # Credits: https://github.com/nadam/userinfobot
 # Example: ALLOWED_USER_ID = [1133316229,]
 USER_PARENT = [1234567899, 1234567899]
-USER_CHILD = [1234567899, 1234567899]
+USER_CHILD = [1234567899, 1234567899] + USER_PARENT
 DEVELOPER_ID = 1234567899 # Only accept one user
 
 # Edit filename here
