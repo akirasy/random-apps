@@ -122,28 +122,38 @@ def new_month(context: CallbackContext):
     month = datetime.now().strftime('%b%y')
     sql_adapter.create_table(month)
 
-def generic_reminder(payment, due_date):
-    def inside_func(context: CallbackContext):
-        context.bot.send_message(chat_id=config.ALLOWED_USER_ID[0], text=
-            'You have planned to make payment today:\n'
-           f'    Payment: {payment}\n'
-           f'    Due date: {due_date}-{datetime.now().strftime("%b-%y")}\n'
-            'Please provide payment before due date to avoid payment penalty.')
-    return inside_func
+def remind_02(context: CallbackContext):
+    context.bot.send_message(chat_id.ALLOWED_USER_ID[0], text=
+         'You have planned to make payment today.\n'
+         '  - Proton Iriz\n'
+         '  - CC Shopee\n'
+         '  - Mother\n'
+         '  - Wife\n'
+         '  - Saga\n'
+         '  - Maid\n'
+         '  - Unifi mobile\n'
+         'Please provide payment before due date to avoid payment penalty.')
 
-car_proton_iriz         = generic_reminder('Proton Iriz'        , 16)
-cc_maybank              = generic_reminder('CC - Maybank'       , 26)
-cc_shopee               = generic_reminder('CC - Shopee'        , 15)
-cc_cimb                 = generic_reminder('CC - CIMB'          , 16)
-services_unifi          = generic_reminder('Unifi Fibre'        , 30)
-services_unifi_mobile   = generic_reminder('Unifi Mobile'       , 21)
-services_maid           = generic_reminder('Maid'               , 10)
-utility_house_rent      = generic_reminder('House rent'         , 28)
-utility_water           = generic_reminder('Water utility bill' , 28)
-utility_tnb             = generic_reminder('TNB utility bill'   , 30)
-personal_mother         = generic_reminder('Mak - Kamariah'     , 15)
-personal_wife           = generic_reminder('Wife - Afifah syg'  , 15)
-personal_saga_abah      = generic_reminder('Saga abah - Jamilah', 10)
+def remind_07(context: CallbackContext):
+    context.bot.send_message(chat_id.ALLOWED_USER_ID[0], text=
+        'You have planned to make payment today.\n'
+        '   - CC Ikhwan\n'
+        '   - CC CIMB\n'
+        'Please provide payment before due date to avoid payment penalty.')
+
+def remind_12(context: CallbackContext):
+    context.bot.send_message(chat_id.ALLOWED_USER_ID[0], text=
+        'You have planned to make payment today.\n'
+        '   - Unifi fibre\n'
+        '   - Water utility\n'
+        '   - TNB utility\n'
+        'Please provide payment before due date to avoid payment penalty.')
+
+def remind_26(context: CallbackContext):
+    context.bot.send_message(chat_id.ALLOWED_USER_ID[0], text=
+        'You have planned to make payment today.\n'
+        '   - House rent\n'
+        'Please provide payment before due date to avoid payment penalty.')
 
 # Main method
 def main():
@@ -168,20 +178,11 @@ def main():
 
     tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
     job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
-    updater.job_queue.run_monthly(callback=new_month            , day=1 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=car_proton_iriz      , day=2 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=cc_maybank           , day=7 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=cc_shopee            , day=2 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=cc_cimb              , day=3 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=services_unifi       , day=11, when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=services_unifi_mobile, day=1 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=services_maid        , day=4 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=utility_house_rent   , day=26, when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=utility_water        , day=15, when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=utility_tnb          , day=15, when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=personal_mother      , day=2 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=personal_wife        , day=2 , when=job_time, day_is_strict=False)
-    updater.job_queue.run_monthly(callback=personal_saga_abah   , day=2 , when=job_time, day_is_strict=False)
+    updater.job_queue.run_monthly(callback=new_month    , day=1 , when=job_time)
+    updater.job_queue.run_monthly(callback=remind_02    , day=2 , when=job_time)
+    updater.job_queue.run_monthly(callback=remind_07    , day=7 , when=job_time)
+    updater.job_queue.run_monthly(callback=remind_12    , day=12, when=job_time)
+    updater.job_queue.run_monthly(callback=remind_26    , day=26, when=job_time)
 
     updater.start_polling()
     logger.info('Telegram service started.')
