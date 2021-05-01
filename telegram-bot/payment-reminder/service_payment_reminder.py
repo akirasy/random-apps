@@ -15,7 +15,7 @@ import config
 # Logging features
 logging.basicConfig(
     # for debugging in server, uncomment this line to write log in file
-        #filename=str(config.logging_file),
+        filename=str(config.logging_file),
         format='%(asctime)s - %(levelname)s - %(message)s',
         datefmt='(%d-%b-%y %H:%M:%S)',
         level=logging.INFO)
@@ -123,7 +123,7 @@ def new_month(context: CallbackContext):
     sql_adapter.create_table(month)
 
 def remind_02(context: CallbackContext):
-    context.bot.send_message(chat_id.ALLOWED_USER_ID[0], text=
+    context.bot.send_message(config.ALLOWED_USER_ID[0], text=
          'You have planned to make payment today.\n'
          '  - Proton Iriz\n'
          '  - CC Shopee\n'
@@ -135,14 +135,14 @@ def remind_02(context: CallbackContext):
          'Please provide payment before due date to avoid payment penalty.')
 
 def remind_07(context: CallbackContext):
-    context.bot.send_message(chat_id.ALLOWED_USER_ID[0], text=
+    context.bot.send_message(config.ALLOWED_USER_ID[0], text=
         'You have planned to make payment today.\n'
         '   - CC Ikhwan\n'
         '   - CC CIMB\n'
         'Please provide payment before due date to avoid payment penalty.')
 
 def remind_12(context: CallbackContext):
-    context.bot.send_message(chat_id.ALLOWED_USER_ID[0], text=
+    context.bot.send_message(config.ALLOWED_USER_ID[0], text=
         'You have planned to make payment today.\n'
         '   - Unifi fibre\n'
         '   - Water utility\n'
@@ -150,9 +150,10 @@ def remind_12(context: CallbackContext):
         'Please provide payment before due date to avoid payment penalty.')
 
 def remind_26(context: CallbackContext):
-    context.bot.send_message(chat_id.ALLOWED_USER_ID[0], text=
+    context.bot.send_message(config.ALLOWED_USER_ID[0], text=
         'You have planned to make payment today.\n'
         '   - House rent\n'
+        '   - Taska Batrisyia\n'
         'Please provide payment before due date to avoid payment penalty.')
 
 # Main method
@@ -182,7 +183,7 @@ def main():
     updater.job_queue.run_monthly(callback=remind_02    , day=2 , when=job_time)
     updater.job_queue.run_monthly(callback=remind_07    , day=7 , when=job_time)
     updater.job_queue.run_monthly(callback=remind_12    , day=12, when=job_time)
-    updater.job_queue.run_monthly(callback=remind_26    , day=26, when=job_time)
+    updater.job_queue.run_monthly(callback=remind_26    , day=1 , when=job_time)
 
     updater.start_polling()
     logger.info('Telegram service started.')
