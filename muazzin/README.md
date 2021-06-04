@@ -13,8 +13,8 @@ To use other `rss link` from other website, please examine your `rss feed` struc
   - [python 3.x](https://www.python.org/doc/)
   - [python3-pip](https://packages.debian.org/buster/python3-pip)
   - [omxplayer](https://github.com/popcornmix/omxplayer)
-- Python package
-  - [feedparser](https://pypi.org/project/feedparser/)
+- Python 3
+
 ### Hardware
 - [raspberry pi](https://www.raspberrypi.org/products/)
 - Speaker, or laudspeaker if you might
@@ -22,27 +22,18 @@ To use other `rss link` from other website, please examine your `rss feed` struc
 ## Installation
 1. Install required software dependencies.
 ```
-sudo apt -y install python3 python3-pip omxplayer
-sudo pip3 install feedparser
+sudo apt -y install python3-pip omxplayer
+sudo pip3 install -r requirements.txt
 ```
 2. And you're done! Proceed to __Usage__ section.
 
 ## Usage
-1. Edit file `muazzin.py` to:
-   - Match your `BASE_DIR` to your `folder-directory`.
-   - Change `rss feed` link to your area.
-2. Here is the link to get the `rss_feed`. [Portal e-Solat](https://www.e-solat.gov.my/)
+1. Open `config.py` and change to your area. [Portal e-Solat](https://www.e-solat.gov.my/)
+2. Allow executable for `muazzin.py`.
 ```
-muazzin.py
-----------------------------------
-# ..
-# ..
-rss_link = 'https://your-rss-link/'
-BASE_DIR = '/your/folder/directory/'
-# ..
-# ..
+sudo chmod +x muazzin.py
 ```
-2. Then, use crontab to execute `muazzin.py` every minutes.
+3. Execute `muazzin.py` file on every boot using crontab. (Hint: `crontab -e`)
 ```
 crontab -e
 ----------------------------------
@@ -52,24 +43,9 @@ crontab -e
 #
 # 
 # m h  dom mon dow   command
-* * * * * /path-to-git-folder/muazzin.py
-
+@reboot /path/to/python3 /path/to/muazzin/muazzin.py
 ```
-3. You may also do a `test run` by modifying function `def muazzin(input_file, music):`
-```
-muazzin.py
-----------------------------------
-# ..
-# ..
-def muazzin(input_file, music):
-    #time_decoy_str = '19:16'
-    #time_decoy = datetime.strptime(time_decoy_str, '%H:%M').strftime('%H:%M')
-    #time_now = time_decoy
-    time_now = datetime.now().strftime('%H:%M')
-# ..
-# ..
-```
+4. Make sure time localization is properly set to your region.
 
 ## Improvement
-- [ ] Use `timedelta` to calculate interval between _azan prayers_. (So using `crontab` every minutes won't be necessary).
-- [ ] Create `config` file to easily change `rss link`, doing `test run` and others.
+- [ ] Add more rss link into `azan_region.py` for other area in Malaysia
