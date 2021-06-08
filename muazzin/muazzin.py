@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import pathlib, time, datetime
+import urllib, pathlib, time, datetime
 import linecache, logging, subprocess
 import feedparser
 import schedule
@@ -25,7 +25,10 @@ azan_music = BASE_DIR.joinpath('azan.m4a')
 
 def update_time():
     logger.info('Update time for azan in file.')
-    feed = feedparser.parse(feed_link)
+    while True:
+        try: feed = feedparser.parse(feed_link)
+        except urllib.error.URLError: continue
+        break
     last_update = datetime.datetime.strptime(feed.feed.updated, '%d-%m-%Y %H:%M:%S').strftime('%d-%m-%Y')
     solat_data = [['Last update', last_update]]
     for i in range(7):
@@ -46,26 +49,42 @@ def create_job():
     schedule.every().day.at(data[13]).do(begin_azan)
     schedule.every().day.at(data[15]).do(begin_azan)
 
+def create_job_once():
+    logger.info('Check azan time for today.')
+    now = datetime.datetime.now()
+    data = azan_time.read_text().split('\n')
+    pending = [data[5], data[9], data[11], data[13], data[15]]
+    for i in pending:
+        hour_min = i.split(':')
+        pending_item = now.replace(hour=int(hour_min[0]), minute=int(hour_min[1]))
+        if pending_item > now:
+            schedule.every().day.at(i).do(begin_azan)
+            logger.info(f'Schedule azan at {i}.')
+    return schedule.CancelJob
+
 def begin_azan():
     logger.info('Playing azan now.')
     bash_command = f'omxplayer -o local {azan_music.resolve()}'
     subprocess.run(bash_command.split())
     return schedule.CancelJob
 
-def get_log():
-    for i in schedule.get_jobs():
-        logger.info(i)
-
 def main():
     if not azan_time.exists():
         logger.info('File "azan-time.txt" not exists.')
         update_time()
+    schedule.every(3).seconds.do(create_job_once)
     schedule.every().day.at('00:05').do(update_time)
     schedule.every().day.at('00:10').do(create_job)
     logger.info('Running service in background...')
     while True:
+        n = schedule.idle_seconds()
+        logger.info(f'Next job in {round(n/60, 2)} minutes...')
+        if n is None: break
+        elif n > 0: time.sleep(n)
         schedule.run_pending()
-        time.sleep(1)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception:
+        logger.exception('An error occured.')
