@@ -23,12 +23,25 @@ Parent and child can check account status from the group.
 - What's the balance? `/check`
 - They work on something? `/deposit`
 - Want to buy something? `/withdraw`
-#### 4. RaspberryPi Bot
-- Easy deploy to my raspberry pi
-- Just git pull it
-- Also can be used to restart and issue some other command
 
 ## Upcoming Bots
 If I have some telegram bot ideas, I'd be sure to put it here. So I can code it later.
 
 - [ ] Nothing so far
+
+## Run as `python script` instead of docker
+
+Simply use `crontab` and run this every time host boot.
+
+```
+#!/usr/bin/env bash
+
+venv='/home/pi/.venv/telegram-bot/bin/python3'
+prefix='/home/pi/telegram-bot'
+
+sleep 10
+${venv} ${prefix}/raspi/service_raspi.py                       & sleep 60
+${venv} ${prefix}/payment-reminder/service_payment_reminder.py & sleep 60
+${venv} ${prefix}/spending-logger/service_spending_logger.py   & sleep 60
+${venv} ${prefix}/virtual-account/service_virtual_account.py   & sleep 60
+```

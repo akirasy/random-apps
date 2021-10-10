@@ -118,6 +118,12 @@ def sql_command(update, context):
     update.message.reply_text(output)
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
+@send_typing_action
+@restricted
+def init_database(update, context):
+    month = datetime.now().strftime('%b%y')
+    sql_adapter.create_table(month)
+
 def new_month(context: CallbackContext):
     month = datetime.now().strftime('%b%y')
     sql_adapter.create_table(month)
@@ -172,6 +178,8 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('sql'    , sql_command))
     updater.dispatcher.add_handler(CommandHandler('paid'   , paid))
     updater.dispatcher.add_handler(CommandHandler('check'  , check_payment))
+
+    updater.dispatcher.add_handler(CommandHandler('init_database' , init_database))
 
     tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
     job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))

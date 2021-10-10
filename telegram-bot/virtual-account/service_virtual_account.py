@@ -14,7 +14,7 @@ from functools import wraps
 from datetime import datetime
 
 import sql_adapter_virtual_account as sql_adapter
-import config_virtual_account as config
+import config
 
 # Logging features
 logging.basicConfig(
@@ -189,6 +189,10 @@ def sql_command(update, context):
     update.message.reply_text(output)
     logger.info(f'{update.message.from_user.first_name} used command: {update.message.text}')
 
+def init_database(update, context):
+    month = datetime.now().strftime('%b%y')
+    sql_adapter.create_table(month)
+
 def new_month(context: CallbackContext):
     month = datetime.now().strftime('%b%y')
     date = datetime.now().strftime('%d-%m-%y')
@@ -219,17 +223,19 @@ def main():
     	logger.info('Reloading telegram service...')
     updater.dispatcher.add_handler(CommandHandler('admin_reload', restart_telegram, filters=Filters.user(config.DEVELOPER_ID)))
 
-    updater.dispatcher.add_handler(CommandHandler('start'      , start))
-    updater.dispatcher.add_handler(CommandHandler('source'     , source_code))
+    updater.dispatcher.add_handler(CommandHandler('start'         , start))
+    updater.dispatcher.add_handler(CommandHandler('source'        , source_code))
 
-    updater.dispatcher.add_handler(CommandHandler('admin_help' , admin_help))
-    updater.dispatcher.add_handler(CommandHandler('deposit'    , deposit))
-    updater.dispatcher.add_handler(CommandHandler('withdraw'   , withdraw))
-    updater.dispatcher.add_handler(CommandHandler('sql'        , sql_command))
+    updater.dispatcher.add_handler(CommandHandler('admin_help'    , admin_help))
+    updater.dispatcher.add_handler(CommandHandler('deposit'       , deposit))
+    updater.dispatcher.add_handler(CommandHandler('withdraw'      , withdraw))
+    updater.dispatcher.add_handler(CommandHandler('sql'           , sql_command))
 
-    updater.dispatcher.add_handler(CommandHandler('help'       , show_help))
-    updater.dispatcher.add_handler(CommandHandler('check'      , check_balance))
-    updater.dispatcher.add_handler(CommandHandler('summary'    , summary))
+    updater.dispatcher.add_handler(CommandHandler('help'          , show_help))
+    updater.dispatcher.add_handler(CommandHandler('check'         , check_balance))
+    updater.dispatcher.add_handler(CommandHandler('summary'       , summary))
+
+    updater.dispatcher.add_handler(CommandHandler('init_database' , init_database))
 
     tz_kul = pytz.timezone('Asia/Kuala_Lumpur')
     job_time = tz_kul.localize(datetime.strptime('00:05','%H:%M'))
