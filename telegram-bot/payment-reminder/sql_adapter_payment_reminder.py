@@ -29,19 +29,18 @@ def create_table(table):
             payment_date TEXT);
                 ''')
         default_value = [
-                ('Iriz'           ,),
-                ('CC Maybank'     ,),
-                ('CC Shopee'      ,),
-                ('CC CIMB'        ,),
-                ('Unifi Fibre'    ,),
-                ('Unifi Mobile'   ,),
-                ('Taska Batrisyia',),
-                ('House rent'     ,),
-                ('Water bill'     ,),
-                ('TNB bill'       ,),
-                ('Mak'            ,),
-                ('Wife'           ,),
-                ('Saga abah'      ,),]
+                ('Iriz'             ,),
+                ('CC Maybank'       ,),
+                ('CC Shopee'        ,),
+                ('CC CIMB'          ,),
+                ('Taska Batrisyia'  ,),
+                ('PAIP Chatin Hill' ,),
+                ('PAIP Seri Chatin' ,),
+                ('TNB Chatin Hill'  ,),
+                ('TNB Seri Chatin'  ,),
+                ('Mak'              ,),
+                ('Wife'             ,),
+                ('Saga abah'        ,),]
         cursor.executemany(f'''
             INSERT INTO {table} (item) VALUES (?);
                 ''', default_value)
