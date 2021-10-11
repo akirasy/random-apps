@@ -24,12 +24,12 @@ Parent and child can check account status from the group.
 - They work on something? `/deposit`
 - Want to buy something? `/withdraw`
 
-## Upcoming Bots
+### Upcoming Bots
 If I have some telegram bot ideas, I'd be sure to put it here. So I can code it later.
 
 - [ ] Nothing so far
 
-## Run as `python script` instead of docker
+### Run as `python script` instead of docker
 
 Simply use `crontab` and run this every time host boot.
 

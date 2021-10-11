@@ -12,7 +12,7 @@ docker build -t ptb-virtual-account .
 1. Create `directory` in host machine.
 
 ```
-mkdir -p $(HOME)/docker-share/virtual-account
+mkdir -p $HOME/docker-share/virtual-account
 ```
 
 2. Run docker command as below:
@@ -21,7 +21,7 @@ mkdir -p $(HOME)/docker-share/virtual-account
 docker run \
 --detach \
 --restart unless-stopped \
--v $(HOME)/docker-share/virtual-account:/usr/src/app/volume-host/ \
+-v $HOME/docker-share/virtual-account:/usr/src/app/volume-host/ \
 ptb-virtual-account
 ```
 
@@ -31,4 +31,4 @@ ptb-virtual-account
 /init_database
 ```
 
-4. Database `database.db` is in sqlite format and is available at `$(HOME)/docker-share/virtual-account` in host directory.
+4. Database `database.db` is in sqlite format and is available at `$HOME/docker-share/virtual-account` in host directory.

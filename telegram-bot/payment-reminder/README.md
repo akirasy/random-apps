@@ -12,7 +12,7 @@ docker build -t ptb-payment-reminder .
 1. Create `directory` in host machine.
 
 ```
-mkdir -p $(HOME)/docker-share/payment-reminder
+mkdir -p $HOME/docker-share/payment-reminder
 ```
 
 2. Run docker command as below:
@@ -21,7 +21,7 @@ mkdir -p $(HOME)/docker-share/payment-reminder
 docker run \
 --detach \
 --restart unless-stopped \
--v $(HOME)/docker-share/payment-reminder:/usr/src/app/volume-host/ \
+-v $HOME/docker-share/payment-reminder:/usr/src/app/volume-host/ \
 ptb-payment-reminder
 ```
 
@@ -31,4 +31,4 @@ ptb-payment-reminder
 /init_database
 ```
 
-4. Database `database.db` is in sqlite format and is available at `$(HOME)/docker-share/payment-reminder` in host directory.
+4. Database `database.db` is in sqlite format and is available at `$HOME/docker-share/payment-reminder` in host directory.

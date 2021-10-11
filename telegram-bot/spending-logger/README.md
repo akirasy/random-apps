@@ -12,7 +12,7 @@ docker build -t ptb-spending-logger .
 1. Create `directory` in host machine.
 
 ```
-mkdir -p $(HOME)/docker-share/spending-logger
+mkdir -p $HOME/docker-share/spending-logger
 ```
 
 2. Run docker command as below:
@@ -21,7 +21,7 @@ mkdir -p $(HOME)/docker-share/spending-logger
 docker run \
 --detach \
 --restart unless-stopped \
--v $(HOME)/docker-share/spending-logger:/usr/src/app/volume-host/ \
+-v $HOME/docker-share/spending-logger:/usr/src/app/volume-host/ \
 ptb-spending-logger
 ```
 
@@ -31,4 +31,4 @@ ptb-spending-logger
 /init_database
 ```
 
-4. Database `database.db` is in sqlite format and is available at `$(HOME)/docker-share/spending-logger` in host directory.
+4. Database `database.db` is in sqlite format and is available at `$HOME/docker-share/spending-logger` in host directory.
