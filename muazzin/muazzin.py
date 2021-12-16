@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 import urllib, pathlib, time, datetime
-import linecache, logging, subprocess
+import linecache, logging, subprocess, os
 import feedparser
 import schedule
-
-import config
 
 # Logging features
 logging.basicConfig(
@@ -18,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # set variables
 BASE_DIR = pathlib.Path(__file__).parent
-feed_link = config.location
+feed_link = 'https://www.e-solat.gov.my/index.php?r=esolatApi/xmlfeed&zon=' + os.getenv('KOD')
 
 azan_time = BASE_DIR.joinpath('azan-time.txt')
 azan_music = BASE_DIR.joinpath('azan.m4a')
@@ -64,7 +62,7 @@ def create_job_once():
 
 def begin_azan():
     logger.info('Playing azan now.')
-    bash_command = f'omxplayer -o local {azan_music.resolve()}'
+    bash_command = f'mplayer {azan_music.resolve()}'
     subprocess.run(bash_command.split())
     return schedule.CancelJob
 
