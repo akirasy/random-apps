@@ -62,7 +62,7 @@ def create_job_once():
 
 def begin_azan():
     logger.info('Playing azan now.')
-    bash_command = f'mplayer {azan_music.resolve()}'
+    bash_command = f'mplayer -volume {os.getenv("VOL")} {azan_music.resolve()}'
     subprocess.run(bash_command.split())
     return schedule.CancelJob
 

@@ -27,6 +27,7 @@ This app uses the power of `Docker Engine` and can run on any device that runs D
         --restart unless-stopped \
         --device /dev/snd \
         --env KOD="{KOD_KAWASAN}" \
+        --env VOL={volume 0-100} \
         muazzin
     ```
 3. Attach speaker or laudspeaker if you might and just keep your server/raspberry pi/computer running.
